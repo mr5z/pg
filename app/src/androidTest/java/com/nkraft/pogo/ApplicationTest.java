@@ -1,4 +1,4 @@
-package com.nkraft.pg;
+package com.nkraft.pogo;
 
 import android.app.Application;
 import android.test.ApplicationTestCase;
