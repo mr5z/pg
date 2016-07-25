@@ -1,7 +1,9 @@
 package com.nkraft.pogo.controller.mapper;
 
+import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
+import android.database.SQLException;
 import android.database.sqlite.SQLiteDatabase;
 import android.os.AsyncTask;
 
@@ -33,7 +35,26 @@ public class AccountMapper {
         return instance;
     }
 
-    public void getSignedInAccount(final AccountListener listener) {
+    public void addAccount(final Account account, final AddAccountListener listener) {
+        new AsyncTask<Void, Void, String>() {
+            @Override
+            protected String doInBackground(Void... voids) {
+                try {
+                    addAccount(account);
+                    return null;
+                } catch (SQLException e) {
+                    return e.getMessage();
+                }
+            }
+
+            @Override
+            protected void onPostExecute(String result) {
+                listener.onAddAccount(result);
+            }
+        }.execute();
+    }
+
+    public void getSignedInAccount(final GetAccountListener listener) {
         new AsyncTask<Void, Void, Account>() {
 
             @Override
@@ -43,9 +64,23 @@ public class AccountMapper {
 
             @Override
             protected void onPostExecute(Account account) {
-                listener.onAccountRetrieve(account);
+                listener.onGetAccount(account);
             }
         }.execute();
+    }
+
+    private void addAccount(Account account) throws SQLException {
+        SQLiteDatabase db = database.getWritableDatabase();
+        String query = String.format(Locale.ROOT, "");
+        ContentValues contentValues = new ContentValues();
+        contentValues.put(AccountDatabase.COLUMN_GOOGLE_ID, account.getGoogleId());
+        contentValues.put(AccountDatabase.COLUMN_EMAIL, account.getEmail());
+        contentValues.put(AccountDatabase.COLUMN_DISPLAY_NAME, account.getDisplayName());
+        contentValues.put(AccountDatabase.COLUMN_SIGNED_IN, account.isSignedIn());
+        long id = db.insertOrThrow(AccountDatabase.TABLE_NAME, null, contentValues);
+        if (id == -1) {
+            throw new SQLException("SQL returns invalid id during insertion of new row");
+        }
     }
 
     private Account getSignedInAccount() {
@@ -74,12 +109,15 @@ public class AccountMapper {
                     .signedIn(signedIn)
                     .build();
         }
-
         return null;
-
     }
 
-    public interface AccountListener {
-        void onAccountRetrieve(Account account);
+    public interface GetAccountListener {
+        void onGetAccount(Account account);
     }
+
+    public interface AddAccountListener {
+        void onAddAccount(String error);
+    }
+
 }
